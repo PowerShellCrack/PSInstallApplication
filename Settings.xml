@@ -4,8 +4,8 @@
 		Version: version of single application to install. 
 	-->
 	<Details>
-		<Name>Install-7Zip</Name>
-		<Version>18.05.00.0</Version>
+		<Name></Name>
+		<Version></Version>
 	</Details>
 	<!--
 	Application: supports multiple applications or commands in order
@@ -55,26 +55,14 @@
 		Allowed Values (case insensitive): True or False
 	-->
 	<Application>
-		<Name>7-Zip 18.05 (x64)</Name>
-		<InstallerName>7-Zip</InstallerName>
-		<InstallerType>Uninstall</InstallerType>
-		<InstallSwitches>/S</InstallSwitches>
-		<SupportedArc>x64</SupportedArc>
-		<DetectionType>File</DetectionType>
-		<DetectionRule>C:\Program Files\7-Zip\Uninstall.exe</DetectionRule>
-		<IgnoreExitCodes>3010</IgnoreExitCodes>
-		<DetectionAfter>False</DetectionAfter>
-	</Application>
-	
-	<Application>
-		<Name>7-Zip 18.05 (x64 edition)</Name>
-		<InstallerName>7z1805-x64.msi</InstallerName>
-		<InstallerType>MSI</InstallerType>
-		<InstallSwitches>/quiet /norestart</InstallSwitches>
-		<SupportedArc>x64</SupportedArc>
-		<DetectionType>GUID</DetectionType>
-		<DetectionRule>[AUTO]</DetectionRule>
-		<IgnoreExitCodes>3010</IgnoreExitCodes>
-		<DetectionAfter>False</DetectionAfter>
+		<Name></Name>
+		<InstallerName></InstallerName>
+		<InstallerType></InstallerType>
+		<InstallSwitches></InstallSwitches>
+		<SupportedArc></SupportedArc>
+		<DetectionType></DetectionType>
+		<DetectionRule></DetectionRule>
+		<IgnoreExitCodes></IgnoreExitCodes>
+		<DetectionAfter></DetectionAfter>
 	</Application>
 </xml>
