@@ -5,13 +5,13 @@
 	</Details>
 	
 	<Application>
-		<Name>7-Zip 18.05 (x64)</Name>
-		<InstallerName>7-Zip</InstallerName>
+		<Name>7-Zip(x64)</Name>
+		<Installer>C:\Program Files\7-Zip\Uninstall.exe</Installer>
 		<InstallerType>Uninstall</InstallerType>
 		<InstallSwitches>/S</InstallSwitches>
 		<SupportedArc>x64</SupportedArc>
 		<DetectionType>File</DetectionType>
-		<DetectionRule>C:\Program Files\7-Zip\Uninstall.exe</DetectionRule>
+		<DetectionRule>[AUTO]</DetectionRule>
 		<IgnoreExitCodes>3010</IgnoreExitCodes>
 		<DetectionAfter>False</DetectionAfter>
 	</Application>
