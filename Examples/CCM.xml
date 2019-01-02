@@ -8,7 +8,7 @@
 		<Name>CCMSetup</Name>
 		<InstallerName>ccmsetup.exe</InstallerName>
 		<InstallerType>EXE</InstallerType>
-		<InstallSwitches>SMSCACHESIZE=10240 SMSSITECODE=AUTO</InstallSwitches>
+		<InstallSwitches>/MP:[SwitchArguments] SMSCACHESIZE=10240 SMSSITECODE=AUTO</InstallSwitches>
 		<SupportedArc>Both</SupportedArc>
 		<DetectionType>REG</DetectionType>
 		<DetectionRule>HKEY_LOCAL_MACHINE\Software\Microsoft\SMS\Mobile Client,ProductVersion,[Version]</DetectionRule>
