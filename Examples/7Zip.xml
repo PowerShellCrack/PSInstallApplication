@@ -17,6 +17,18 @@
 	</Application>
 	
 	<Application>
+		<Name>7-Zip (x86 exe)</Name>
+		<Installer>C:\Program Files (x86)\7-Zip\Uninstall.exe</Installer>
+		<InstallerType>Uninstall</InstallerType>
+		<InstallSwitches>/S</InstallSwitches>
+		<SupportedArc>x86</SupportedArc>
+		<DetectionType>File</DetectionType>
+		<DetectionRule>[AUTO]</DetectionRule>
+		<IgnoreExitCodes>3010</IgnoreExitCodes>
+		<DetectionAfter>False</DetectionAfter>
+	</Application>
+	
+	<Application>
 		<Name>7-Zip 18.05 (x64 edition)</Name>
 		<InstallerName>7z1805-x64.msi</InstallerName>
 		<InstallerType>MSI</InstallerType>
