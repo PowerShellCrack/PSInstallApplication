@@ -22,49 +22,50 @@ This can be multiple applications
 Application Configurations:
  - Name: Name of specific task to run (Used for logging and if DetectionRule has value of [Name])
  - Installer: path to installer. Defaults to source directory, but name MUST be specified
- 	AUTO will search for the first file in source folder (if extension is specified, it will seeach for the first file with that
+      - AUTO will search for the first file in source folder (if extension is specified, it will seeach for the first file with that
 	extension)
 	
  - InstallerType: Identifies how script will process the installer
-        Allowed Values (case insensitive): AUTO,EXE,MSI,MSP,MSU,CMD,BAT,VBS
-        AUTO will detect file extension of Installer
+      - Allowed Values (case insensitive): AUTO,EXE,MSI,MSP,MSU,CMD,BAT,VBS
+      - AUTO will detect file extension of Installer
 	
  - InstallSwitches: Are used for the arguments the application may need. Spaces are allowed
-	If [SourcePath] is provided, it will replace it ewith the directory the install is located
-	eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use <code>TRANSFORMS=
-	[SourcePath]\AcrobatReaderDC.mst"</code>
+      - If [SourcePath] is provided, it will replace it ewith the directory the install is located
+	eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use
+	<code>TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
-	Allowed Values (case insensitive): Both, x64, x86
+      - Allowed Values (case insensitive): Both, x64, x86
 	NOTE: If Both is specified, script will loop through both architictures if OS has it. 
 	
  - DetectionType: Specifies how the software will detect if application was installed already
-	Allowed Values (case insensitive): File,Reg,GUID
-	- GUID will scan system for installed products and compare it to DetectionRule is set {some-guid}. This process takes longer based on products already installed
+      - Allowed Values (case insensitive): File,Reg,GUID
+      - GUID will scan system for installed products and compare it to DetectionRule is set {some-guid}. This process takes longer based
+      on products already installed
 
  - DetectionRule: Depending on DetectionType, this will be the path, name and value to check
-	Value Requirements for REG Type: Registry path, Registry Key Name, Registry value (optional)
-		If version is not provided it will detect if registry key name exists only
-		If [version] is provided, it will compare it to the version specified in main details
+      - Value Requirements for REG Type: Registry path, Registry Key Name, Registry value (optional)
+              - If version is not provided it will detect if registry key name exists only
+              - If [version] is provided, it will compare it to the version specified in main details
 		eg. HKEY_LOCAL_MACHINE\Software\Microsoft\SMS\Mobile Client,ProductVersion,[Version]
-	Value Requirements for FILE Type: Folder path, File Name, Version (optional)
-		If version is not provided it will detect if file exists only
-		If [version] is provided, it will compare it to the version specified in main details
+      - Value Requirements for FILE Type: Folder path, File Name, Version (optional)
+              - If version is not provided it will detect if file exists only
+              - If [version] is provided, it will compare it to the version specified in main details
 		eg. C:\Program Files (x86)\Java\jre1.8.0_181\bin,java.exe,[Version]
-	Value Requirements for GUID Type: {some-guid}, Version (optional)
-		If version is not provided it will detect if GUID exists only
-		If [version] is provided, it will compare it to the version specified in details
+      - Value Requirements for GUID Type: {some-guid}, Version (optional)
+              - If version is not provided it will detect if GUID exists only
+              - If [version] is provided, it will compare it to the version specified in details
 		eg. {A68173CF-C68F-4878-A1A1-3AD0A286D38A},[Version]
 
  - IgnoreErrorCodes: Ignores any exit codes in the list. Useful is installer requires a reboot (eg. 3010)	
 	
  - ValidateInstall: Used as an extra validation check. Run the detection Rule a second time. 
-		Allowed Values (case insensitive): True or False
+              - Allowed Values (case insensitive): True or False
 
 ## Dynamic values
-	[<num>-Version] =  trims the version's first digits in front by <num>
-	[Version-<num>] =  trims the version's last digits by <num>
-	[<num>-Version-<num>] =  Allow to trim the version in front or behind
-	eg: Adobe Acrobat DC msp file version is [2019.010.20064], but the detection needs to find [19.010.20064], so [2-Version] is used in the DetectionRule (see example xml)
+ - [\<num\>-Version] =  trims the version's first digits in front by <num>
+ - [Version-\<num\>] =  trims the version's last digits by <num>
+ - [\<num\>-Version-\<num\>] =  Allow to trim the version in front or behind
+    eg: Adobe Acrobat DC msp file version is [2019.010.20064], but the detection needs to find [19.010.20064], so [2-Version] is used in the DetectionRule (see example xml)
 
 ## Additional arguments 
 Call by the Intall-Application.ps1 directly. This allow dynamic arguments to be passed using SCCM/MDT properties or other external sources:
