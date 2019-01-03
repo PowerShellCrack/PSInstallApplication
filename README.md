@@ -65,6 +65,7 @@ Application Configurations:
  - [\<num\>-Version] =  trims the version's first digits in front by <num>
  - [Version-\<num\>] =  trims the version's last digits by <num>
  - [\<num\>-Version-\<num\>] =  Allow to trim the version in front or behind
+ 
  <code>eg: Adobe Acrobat DC msp file version is [2019.010.20064], but the detection needs to find [19.010.20064], so [2-Version] is used in the DetectionRule (see example xml)</code>
 
 ## Additional arguments 
