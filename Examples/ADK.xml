@@ -1,6 +1,7 @@
 <xml>
 	<Details>
-		<Name>Install-ADK</Name>
+		<InstallName>Install-ADK</InstallName>
+		<Name>Windows Assessment and Deployment Tookit</Name>
 		<Version>10.1.17763.1</Version>
 	</Details>
 	
