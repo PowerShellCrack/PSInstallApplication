@@ -1,6 +1,7 @@
 <xml>
 	<Details>
-		<Name>Install-7Zip</Name>
+		<InstallName>Install-7Zip</InstallName>
+		<Name>7-Zip</Name>
 		<Version>18.05.00.0</Version>
 	</Details>
 	
