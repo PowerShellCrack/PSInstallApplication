@@ -1,6 +1,7 @@
 <xml>
 	<Details>
-		<Name>Install-CCMAgent</Name>
+		<InstallName>Install-CCMAgent</InstallName>
+		<Name>Microsoft Congiguration Manager Client</Name>
 		<Version>5.00.8577.1108</Version>
 	</Details>
 
