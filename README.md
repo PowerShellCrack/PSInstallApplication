@@ -5,8 +5,8 @@ I used to use the appdeploytoolkit from https://psappdeploytoolkit.com/, but I h
 This script is not perfect, but it does apretty good job of detecting and installing applications. 
 
 The xml is broken into two parts: 
-	The details
-	The Application(s)
+      - The details
+      - The Application(s)
 	
 ## The Details
 This covers the information for the overall application. 
@@ -17,7 +17,7 @@ This covers the information for the overall application.
    
 
 ## The Application(s)
-This can be multiple applications
+This can be multiple applications. The script will loop through each one in order
 	
 Application Configurations:
  - Name: Name of specific task to run (Used for logging and if DetectionRule has value of [Name])
