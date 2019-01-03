@@ -5,8 +5,8 @@ I used to use the appdeploytoolkit from https://psappdeploytoolkit.com/, but I h
 This script is not perfect, but it does apretty good job of detecting and installing applications. 
 
 The xml is broken into two parts: 
-      - The details
-      - The Application(s)
+ - The details
+ - The Application(s)
 	
 ## The Details
 This covers the information for the overall application. 
