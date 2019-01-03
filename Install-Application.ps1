@@ -2,7 +2,7 @@ Param (
     [Parameter(Mandatory=$false)]
     [string]$SettingsName = "Settings.xml",
     [Parameter(Mandatory=$false)]
-    $AppInstallerArg,
+    $InstallerArg,
     [Parameter(Mandatory=$false)]
     $SwitchArg,
     [Parameter(Mandatory=$false)]
@@ -429,7 +429,7 @@ Else{
 Try { 
     [xml]$Settings = Get-Content $SettingsFile 
     [string]$Name = $Settings.xml.Details.Name
-    [string]$LogName = $Settings.xml.Details.InstallName
+    [string]$LogName = ($Settings.xml.Details.InstallName) -replace '\s',''
     $Version = $Settings.xml.Details.Version
 }
 Catch { 
@@ -468,7 +468,7 @@ foreach ($App in $Settings.xml.Application) {
     $AppCount = $AppCount + 1
     [string]$AppName = $App.Name
     [string]$AppInstaller = $App.Installer
-    If($AppInstallerArg){$AppInstaller = $AppInstaller.Replace("[InstallArgument]",$AppInstallerArg)}
+    If($InstallerArg){$AppInstaller = $AppInstaller.Replace("[InstallArgument]",$InstallerArg)}
     If(!($AppInstaller) -or ($AppInstaller -eq '[AUTO]') ){
         $AppInstaller = (Get-ChildItem -Path $SourcePath -Filter *.$($App.InstallerType) -Recurse | Select -First 1).FullName
     }
@@ -626,10 +626,12 @@ foreach ($App in $Settings.xml.Application) {
 
     #Process Dynamic Values if found
     switch -regex ($AppDetectionValue){
-        "\[ValueArg\]"     {If($ValueArg){$AppDetectionValue = $ValueArg}}
-        "\[Name\]"         {$AppDetectionValue = $AppName}
-        "\[Version\]"      {$AppDetectionValue = $Version}
-        "\[Version-(\d)\]" {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.substring($matches[0])}} 
+        "\[ValueArg\]"           {If($ValueArg){$AppDetectionValue = $ValueArg}}
+        "\[Name\]"               {$AppDetectionValue = $AppName}
+        "\[Version\]"            {$AppDetectionValue = $Version}
+        "\[Version-(\d)\]"       {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.Substring(0,$Version.Length-$matches[0])}}
+        "\[(\d)\-Version\]"      {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.substring($matches[0])}}
+        "\[(\d)\-Version-(\d)\]" {If($AppDetectionValue -match "(\d)-Version-(\d)"){$LastDigit = $Version.Substring(0,$Version.Length-$matches[1]);$AppDetectionValue = $LastDigit.substring($matches[2])}} 
     }
 
     Write-LogEntry ("`$AppDetectionPath='{0}'" -f $AppDetectionPath) -Severity 4 -Outhost
