@@ -31,11 +31,11 @@ Application Configurations:
 	
  - InstallSwitches: Are used for the arguments the application may need. Spaces are allowed
       - If [SourcePath] is provided, it will replace it ewith the directory the install is located
-	eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use
-	<code>TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
+	<code>eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use
+	TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
       - Allowed Values (case insensitive): Both, x64, x86
-	NOTE: If Both is specified, script will loop through both architictures if OS has it. 
+	<code>NOTE: If Both is specified, script will loop through both architictures if OS has it.</code>
 	
  - DetectionType: Specifies how the software will detect if application was installed already
       - Allowed Values (case insensitive): File,Reg,GUID
@@ -46,15 +46,15 @@ Application Configurations:
       - Value Requirements for REG Type: Registry path, Registry Key Name, Registry value (optional)
               - If version is not provided it will detect if registry key name exists only
               - If [version] is provided, it will compare it to the version specified in main details
-		eg. HKEY_LOCAL_MACHINE\Software\Microsoft\SMS\Mobile Client,ProductVersion,[Version]
+		<code>eg. HKEY_LOCAL_MACHINE\Software\Microsoft\SMS\Mobile Client,ProductVersion,[Version]</code>
       - Value Requirements for FILE Type: Folder path, File Name, Version (optional)
               - If version is not provided it will detect if file exists only
               - If [version] is provided, it will compare it to the version specified in main details
-		eg. C:\Program Files (x86)\Java\jre1.8.0_181\bin,java.exe,[Version]
+		<code>eg. C:\Program Files (x86)\Java\jre1.8.0_181\bin,java.exe,[Version]</code>
       - Value Requirements for GUID Type: {some-guid}, Version (optional)
               - If version is not provided it will detect if GUID exists only
               - If [version] is provided, it will compare it to the version specified in details
-		eg. {A68173CF-C68F-4878-A1A1-3AD0A286D38A},[Version]
+		<code>eg. {A68173CF-C68F-4878-A1A1-3AD0A286D38A},[Version]</code>
 
  - IgnoreErrorCodes: Ignores any exit codes in the list. Useful is installer requires a reboot (eg. 3010)	
 	
@@ -65,27 +65,27 @@ Application Configurations:
  - [\<num\>-Version] =  trims the version's first digits in front by <num>
  - [Version-\<num\>] =  trims the version's last digits by <num>
  - [\<num\>-Version-\<num\>] =  Allow to trim the version in front or behind
-    eg: Adobe Acrobat DC msp file version is [2019.010.20064], but the detection needs to find [19.010.20064], so [2-Version] is used in the DetectionRule (see example xml)
+ <code>eg: Adobe Acrobat DC msp file version is [2019.010.20064], but the detection needs to find [19.010.20064], so [2-Version] is used in the DetectionRule (see example xml)</code>
 
 ## Additional arguments 
 Call by the Intall-Application.ps1 directly. This allow dynamic arguments to be passed using SCCM/MDT properties or other external sources:
  - [InstallArgument] --> Use switch [-InstallerArg <value>] 
  	If specified in the <Installer> section will replace with value passed by the script
-				This can be helpful if multple installers exist, but only one to be installed. 
-				e.g.: Install-Application.ps1 -InstallerArg %CCTKInstallerVersion%
+	This can be helpful if multple installers exist, but only one to be installed. 
+				 e.g. <code>Install-Application.ps1 -InstallerArg %CCTKInstallerVersion%</code>
  - [SwitchArgument] --> Use switch [-SwitchArg <value>] 
 	If specified in the <InstallSwitches> section will replace with value passed by the script
-				e.g.: Install-Application.ps1 -SwitchArg %siteserver%
+				 e.g. <code>Install-Application.ps1 -SwitchArg %siteserver%</code>
  - [DetectArgument] --> Use switch [-DetectionArg <value>] 
 	If specified in the <DetectionRule> section will replace with value passed by the script
-				e.g.: Install-Application.ps1 -DetectionArg %version%
+				 e.g. <code>Install-Application.ps1 -DetectionArg %version%</code>
 				
 ## Examples
- - Typical Example: powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1"
- - CCTK Example: powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -InstallArg 2.2.1
- - CCM Example: powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -SwitchArg mpserver.doamin.com
- - CCM Example: powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -DetectionArg %version%
- - Verbose Example: powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -Verbose
+ - Typical Example: <code>powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1"</code>
+ - CCTK Example: <code>powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -InstallArg 2.2.1</code>
+ - CCM Example: <code>powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -SwitchArg mpserver.doamin.com</code>
+ - CCM Example: <code>powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -DetectionArg %version%</code>
+ - Verbose Example: <code>powershell.exe -ExecutionPolicy Bypass -File ".\Install-Application.ps1" -Verbose</code>
  
 ## In Development
  - Support for PS1,PSD1,NUPKG extensions
