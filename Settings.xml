@@ -1,9 +1,11 @@
 <xml>
 	<!--
-		Name: name that SCCM/MDT identifies and logs to. 
+		InstallName: name that SCCM/MDT identifies and logs to. 
+		Name: Friendly Name (overall status)
 		Version: version of single application to install. 
 	-->
 	<Details>
+		<InstallName></InstallName>
 		<Name></Name>
 		<Version></Version>
 	</Details>
