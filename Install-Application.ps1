@@ -334,7 +334,7 @@ function Process-Application{
         [string]$Type,
         [ValidateSet("Install","Uninstall","Update","Repair")]
         [string]$Action,
-        [string]$AppName,
+        [string]$Name,
         [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [System.IO.FileInfo]$Path,
@@ -470,6 +470,7 @@ foreach ($App in $Settings.xml.Application) {
     [string]$AppInstaller = $App.Installer
     If($InstallerArg){$AppInstaller = $AppInstaller.Replace("[InstallArgument]",$InstallerArg)}
     If(!($AppInstaller) -or ($AppInstaller -eq '[AUTO]') ){
+        Write-LogEntry ("No Installer Specified, scanning source path [{0}] for file type [{1}]" -f $SourcePath,$App.InstallerType) -Severity 4 -Outhost
         $AppInstaller = (Get-ChildItem -Path $SourcePath -Filter *.$($App.InstallerType) -Recurse | Select -First 1).FullName
     }
     [string]$AppInstallerType = $App.InstallerType
