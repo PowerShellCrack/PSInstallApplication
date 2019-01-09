@@ -34,7 +34,7 @@ Application Configurations:
 	<code>eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use
 	TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
       - If [RootPath] is provided, it will replace it with the directory the script is located
-      - If [TSEnv-<MDTSCCM>] is provided, it will replace it with the path or variable the Tasksequence
+      - If [TSEnv-\<MDTSCCM\>] is provided, it will replace it with the path or variable the Tasksequence
 	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT Scripts folder, use	TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
       - Allowed Values (case insensitive): Both, x64, x86
