@@ -1,4 +1,4 @@
-Param (
+﻿Param (
     [Parameter(Mandatory=$false)]
     [string]$SettingsName = "Settings.xml",
     [Parameter(Mandatory=$false)]
@@ -477,7 +477,13 @@ foreach ($App in $Settings.xml.Application) {
 
     [string]$AppInstallSwitches = $App.InstallSwitches
     If($SwitchArg){$AppInstallSwitches = $AppInstallSwitches.Replace("[SwitchArgument]",$SwitchArg)}
-    $AppInstallSwitches = $AppInstallSwitches.replace("[SourcePath]",$SourcePath)
+   
+    #Process Dynamic Values if found
+    switch -regex ($AppInstallSwitches){
+        "\[SourcePath\]"  {$AppInstallSwitches = $AppInstallSwitches.replace("[SourcePath]",$SourcePath)}
+        "\[RootPath\]"    {$AppInstallSwitches = $AppInstallSwitches.replace("[RootPath]",$scriptDirectory)}
+        "\[TSEnv-(.*?)\]" {If($AppInstallSwitches -match "\[TSEnv-(.*?)\]"){$AppInstallSwitches = $AppInstallSwitches.replace("[RootPath]",$tsenv.Value($matches[1]))}}
+    }
 
     [string]$AppSupportedArc = $App.SupportedArc
     [string]$AppDetectionType = $App.DetectionType.ToUpper()
