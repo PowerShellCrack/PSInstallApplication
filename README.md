@@ -30,9 +30,12 @@ Application Configurations:
       - AUTO will detect file extension of Installer
 	
  - InstallSwitches: Are used for the arguments the application may need. Spaces are allowed
-      - If [SourcePath] is provided, it will replace it ewith the directory the install is located
+      - If [SourcePath] is provided, it will replace it with the directory the install is located
 	<code>eg. Adobe installer requires a Transform file. the full path is required. Instead of hardcoding the full path, use
 	TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
+      - If [RootPath] is provided, it will replace it with the directory the script is located
+      - If [TSEnv-<MDTSCCM>] is provided, it will replace it with the path or variable the Tasksequence
+	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT Scripts folder, use	TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
       - Allowed Values (case insensitive): Both, x64, x86
 	<code>NOTE: If Both is specified, script will loop through both architictures if OS has it.</code>
