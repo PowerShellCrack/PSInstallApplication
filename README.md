@@ -37,7 +37,7 @@ Application Configurations:
       - If [TSEnv-\<MDTSCCM\>] is provided, it will replace it with the path or variable the Tasksequence
 	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT
 	Scripts folder, use TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
-      - If special characters are used such as <code>",',[,],(,)</code> use the tick mark to declare key <code><b>`</b></code> them as strings
+      - If special characters are used such as <code>",',[,],(,)</code> use the tick mark to declare key <code>`</code> them as strings
       <code>eg. <InstallSwitches>/adminfile `"[RootPath]\Configs\X86_O16FULL_NOONEDRIVE.MSP`"</InstallSwitches></code>
 	
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
