@@ -38,6 +38,7 @@ Application Configurations:
 	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT
 	Scripts folder, use TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
       - If special characters are used such as <code>",',[,],(,)</code> use the tick mark to declare key <code>`</code> them as strings
+      <code>eg. <InstallSwitches>/adminfile `"[RootPath]\Configs\X86_O16FULL_NOONEDRIVE.MSP<b>`</b>"</InstallSwitches>,/code>
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
       - Allowed Values (case insensitive): Both, x64, x86
 	<code>NOTE: If Both is specified, script will loop through both architictures if OS has it.</code>
