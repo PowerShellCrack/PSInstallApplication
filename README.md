@@ -1,6 +1,6 @@
 # Install-Application.ps1
 
-I used to use the appdeploytoolkit from https://psappdeploytoolkit.com/, but I hava had alot of people want to install software and log it but not have the files from the AppDeployToolkit. Over time, I have developed a small powershell sript to install msi files, then one that installed executables, and one that installed another executable with patches and it kept growing. So I decided to combined alot of that into one powershell script with an xml file for the answers. 
+I used to use the AppDeployToolkit from https://psappdeploytoolkit.com/, but I hava had alot of people wanting to install software and log it but not have the all the files from the AppDeployToolkit. Over time, I have developed a small powershell sript to install msi files, then one that installed executables, and one that installed another executable with patches and it kept growing. So I decided to combined alot of that into one powershell script with an xml file for the answers. 
 
 This script is not perfect, but it does apretty good job of detecting and installing applications. 
 
@@ -35,7 +35,9 @@ Application Configurations:
 	TRANSFORMS=[SourcePath]\AcrobatReaderDC.mst"</code>
       - If [RootPath] is provided, it will replace it with the directory the script is located
       - If [TSEnv-\<MDTSCCM\>] is provided, it will replace it with the path or variable the Tasksequence
-	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT Scripts folder, use	TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
+	<code>eg. Adobe installer requires a Transform file. the full path is required. If the path for the mst file is in the MDT
+	Scripts folder, use TRANSFORMS=[TSEnv-ScriptRoot]\AcrobatReaderDC.mst"</code>
+      - If special characters are used such as ",',[,],(,), use the tick mark to declare key ` them as strings
  - SupportedArc: Architecture to compare software with Operating System. If not a match this application will not run
       - Allowed Values (case insensitive): Both, x64, x86
 	<code>NOTE: If Both is specified, script will loop through both architictures if OS has it.</code>
@@ -62,7 +64,10 @@ Application Configurations:
  - IgnoreErrorCodes: Ignores any exit codes in the list. Useful is installer requires a reboot (eg. 3010)	
 	
  - ValidateInstall: Used as an extra validation check. Run the detection Rule a second time. 
-              - Allowed Values (case insensitive): True or False
+ 	      - Allowed Values (case insensitive): True or False
+ 	      - If set to true and application is already installed, this will not run
+	      - If set to true and detection rule is null, this will not run
+              
 
 ## Dynamic values
  - [\<num\>-Version] =  trims the version's first digits in front by <num>
