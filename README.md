@@ -1,8 +1,8 @@
 # Install-Application.ps1
 
-I used to use the AppDeployToolkit from https://psappdeploytoolkit.com/, but I hava had alot of people wanting to install software and log it but not have the all the files from the AppDeployToolkit. Over time, I have developed a small powershell sript to install msi files, then one that installed executables, and one that installed another executable with patches and it kept growing. So I decided to combined alot of that into one powershell script with an xml file for the answers. 
+I used to use the AppDeployToolkit from https://psappdeploytoolkit.com/, but I have had alot of people wanting to install software and log it but not have the all the files from the AppDeployToolkit. Over time, I have developed a small powershell sript to install msi files, then one that installed executables, and one that installed another executable with patches and it kept growing. So I decided to combined alot of that into one powershell script with an xml file for the installation answers (if needed) 
 
-This script is not perfect, but it does apretty good job of detecting and installing applications. 
+This script is not perfect, but it does a pretty good job of detecting and installing applications just like the appdeploytoolkit.  
 
 The xml is broken into two parts: 
  - The details
@@ -15,7 +15,6 @@ This covers the information for the overall application.
  - Version = As of now its just a version for the application installer. I thought of into making it the overall validated version of
  the app that being installed
    
-
 ## The Application(s)
 This can be multiple applications. The script will loop through each one in order
 	
