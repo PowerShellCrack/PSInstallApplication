@@ -1,4 +1,29 @@
-﻿Param (
+<#
+.SYNOPSIS
+	This script performs the installation or uninstallation of an application(s) using an XML
+.DESCRIPTION
+
+.PARAMETER SettingsName
+	XML File to parse for application rules. Default is: Settings.xml
+.PARAMETER InstallerArg
+	Specifies whether the installation should be run in Interactive, Silent, or NonInteractive mode. Default is: Interactive. Options: Interactive = Shows dialogs, Silent = No dialogs, NonInteractive = Very silent, i.e. no blocking apps. NonInteractive mode is automatically set if it is detected that the process is not user interactive.
+.PARAMETER SwitchArg
+	Allows the 3010 return code (requires restart) to be passed back to the parent process (e.g. SCCM) if detected from an installation. If 3010 is passed back to SCCM, a reboot prompt will be triggered.
+.PARAMETER DetectionArg
+	Changes to "user install mode" and back to "user execute mode" for installing/uninstalling applications for Remote Destkop Session Hosts/Citrix servers.
+.PARAMETER DisableLogging
+	Disables logging to file for the script. Default is: $false.
+.EXAMPLE
+	Install-Application.ps1
+.EXAMPLE
+	Install-Application.ps1 -SettingsName 7Zip.xml
+.EXAMPLE
+	Deploy-Application.ps1 -InstallerArg ""
+.EXAMPLE
+	Install-Application.ps1 -DeploymentType Uninstall
+#>
+
+Param (
     [Parameter(Mandatory=$false)]
     [string]$SettingsName = "Settings.xml",
     [Parameter(Mandatory=$false)]
@@ -12,12 +37,31 @@
 ##*===========================================================================
 ##* FUNCTIONS
 ##*===========================================================================
+#time-lapse formatter
+Function Format-ElapsedTime($ts) {
+    $elapsedTime = ""
+    if ( $ts.Minutes -gt 0 ){$elapsedTime = [string]::Format( "{0:00} min. {1:00}.{2:00} sec.", $ts.Minutes, $ts.Seconds, $ts.Milliseconds / 10 );}
+    else{$elapsedTime = [string]::Format( "{0:00}.{1:00} sec.", $ts.Seconds, $ts.Milliseconds / 10 );}
+    if ($ts.Hours -eq 0 -and $ts.Minutes -eq 0 -and $ts.Seconds -eq 0){$elapsedTime = [string]::Format("{0:00} ms.", $ts.Milliseconds);}
+    if ($ts.Milliseconds -eq 0){$elapsedTime = [string]::Format("{0} ms", $ts.TotalMilliseconds);}
+    return $elapsedTime
+}
+
+Function Format-DatePrefix{
+    [string]$LogTime = (Get-Date -Format 'HH:mm:ss.fff').ToString()
+	[string]$LogDate = (Get-Date -Format 'MM-dd-yyyy').ToString()
+    $CombinedDateTime = "$LogDate $LogTime"
+    return ($LogDate + " " + $LogTime)
+}
+
 function Write-LogEntry {
     param(
-        [parameter(Mandatory=$true, HelpMessage="Value added to the log file.")]
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [ValidateNotNullOrEmpty()]
-        [string]$Value,
-
+        [string]$Message,
+        [Parameter(Mandatory=$false,Position=2)]
+		[ValidateNotNull()]
+		[string]$Source = '',
         [parameter(Mandatory=$false)]
         [ValidateSet(0,1,2,3,4)]
         [int16]$Severity,
@@ -29,7 +73,12 @@ function Write-LogEntry {
         [parameter(Mandatory=$false)]
         [switch]$Outhost
     )
-    
+    ## Get the name of this function
+    [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+    ## Format Log date entry
+    $DateEntry = Format-DatePrefix
+
     [string]$LogTime = (Get-Date -Format 'HH:mm:ss.fff').ToString()
 	[string]$LogDate = (Get-Date -Format 'MM-dd-yyyy').ToString()
 	[int32]$script:LogTimeZoneBias = [timezone]::CurrentTimeZone.GetUtcOffset([datetime]::Now).TotalMinutes
@@ -50,23 +99,30 @@ function Write-LogEntry {
     
     
     If(!$Severity){$Severity = 1}
-    $LogFormat = "<![LOG[$Value]LOG]!>" + "<time=`"$LogTimePlusBias`" " + "date=`"$LogDate`" " + "component=`"$ScriptSource`" " + "context=`"$([Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " + "type=`"$Severity`" " + "thread=`"$PID`" " + "file=`"$ScriptSource`">"
+    $LogFormat = "<![LOG[$Message]LOG]!>" + "<time=`"$LogTimePlusBias`" " + "date=`"$LogDate`" " + "component=`"$ScriptSource`" " + "context=`"$([Security.Principal.WindowsIdentity]::GetCurrent().Name)`" " + "type=`"$Severity`" " + "thread=`"$PID`" " + "file=`"$ScriptSource`">"
     
     # Add value to log file
     try {
         Out-File -InputObject $LogFormat -Append -NoClobber -Encoding Default -FilePath $OutputLogFile -ErrorAction Stop
     }
     catch {
-        Write-Host ("Unable to append log entry to [{0}], error: {1}" -f $OutputLogFile,$_.Exception.ErrorMessage) -ForegroundColor Red
+        Write-Host ("[{0}] [{1}] :: Unable to append log entry to [{1}], error: {2}" -f $DateEntry,$ScriptSource,$OutputLogFile,$_.Exception.ErrorMessage) -ForegroundColor Red
     }
     If($Outhost){
+        If($Source){
+            $OutputMsg = ("[{0}] [{1}] :: {2}" -f $DateEntry,$Source,$Message)
+        }
+        Else{
+            $OutputMsg = ("[{0}] [{1}] :: {2}" -f $DateEntry,$ScriptSource,$Message)
+        }
+
         Switch($Severity){
-            0       {Write-Host $Value -ForegroundColor Green}
-            1       {Write-Host $Value -ForegroundColor Gray}
-            2       {Write-Warning $Value}
-            3       {Write-Host $Value -ForegroundColor Red}
-            4       {If($Global:Verbose){Write-Verbose $Value}}
-            default {Write-Host $Value}
+            0       {Write-Host $OutputMsg -ForegroundColor Green}
+            1       {Write-Host $OutputMsg -ForegroundColor Gray}
+            2       {Write-Warning $OutputMsg}
+            3       {Write-Host $OutputMsg -ForegroundColor Red}
+            4       {If($Global:Verbose){Write-Verbose $OutputMsg}}
+            default {Write-Host $OutputMsg}
         }
     }
 }
@@ -108,7 +164,11 @@ Function Scan-ExistingApplication{
         [string]$AppValue
     )
     Begin{
-        $ExistingValue = $false
+        ## Get the name of this function
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+        ## Format Log date entry
+        $DateEntry = Format-DatePrefix
 
         #determine what architecure is running for regedit path
         [boolean]$Is64Bit = [boolean]((Get-WmiObject -Class 'Win32_Processor' | Where-Object { $_.DeviceID -eq 'CPU0' } | Select-Object -ExpandProperty 'AddressWidth') -eq 64)
@@ -137,17 +197,17 @@ Function Scan-ExistingApplication{
                             $RegPath = ($RegProperty + "\" + $AppPath.Replace('\SOFTWARE\',$regArchSoftPath))
                                    
                             #If AUTO is specified for REG type, get installer's uninstall registry key as $AppPath
-                            Write-LogEntry ("Scanning registry for [{0}] with [{1}] value equal to or greater than [{2}]" -f $RegPath,$AppName,$AppValue) -Severity 4 -Outhost
+                            Write-LogEntry ("Scanning registry for [{0}] with [{1}] value equal to or greater than [{2}]" -f $RegPath,$AppName,$AppValue) -Source ${CmdletName} -Severity 4 -Outhost
                             If(!$ExistingValue){
                                 If($AppPath -eq '[AUTO]'){
                                 #(Get-InstalledProduct -Property 'GUID' -Filter '{C8EA30FC-B20B-465E-9D8A-CDDC09EA72D4}' -Arc x86).GUID
-                                Write-LogEntry ("CALL FUNCTION :: Get-InstalledProduct -Property '$Property' -Filter '$AppValue' -Arc $arc") -Severity 4 -Outhost
+                                Write-LogEntry ("[CMDLET] Get-InstalledProduct -Property '$Property' -Filter '$AppValue' -Arc $arc") -Source ${CmdletName} -Severity 4 -Outhost
                                 $ExistingValue = (Get-InstalledProduct -Property $Property -Filter $AppValue -Arc $arc -Verbose:$Global:Verbose).$Property 
                                   
                                 }
                                 Else{
                                     If(Test-Path $RegPath){
-                                        Write-LogEntry ("CALL FUNCTION :: Get-ItemProperty -Path '" + $RegPath + "' -Name " + $AppName) -Severity 4 -Outhost
+                                        Write-LogEntry ("[CMDLET] Get-ItemProperty -Path '" + $RegPath + "' -Name " + $AppName) -Source ${CmdletName} -Severity 4 -Outhost
                                         $ExistingValue = Get-ItemProperty -Path $RegPath | Select -ExpandProperty $AppName -ErrorAction SilentlyContinue
                                     }
                             
@@ -162,7 +222,7 @@ Function Scan-ExistingApplication{
                             
                             #build full path
                             $AppFullPath = Join-Path $UpdatedAppPath -ChildPath $AppName
-                            Write-LogEntry ("Scanning system for file path [{0}]" -f $AppFullPath) -Severity 1 -Outhost
+                            Write-LogEntry ("Scanning system for file path [{0}]" -f $AppFullPath) -Source ${CmdletName}  -Severity 1 -Outhost
                             
                             # check to be sure $AppPath is a filesystem
                             If(!$ExistingValue){
@@ -174,9 +234,9 @@ Function Scan-ExistingApplication{
                           }
                     #look for 1 properties from array        
                     "GUID"{
-                            Write-LogEntry ("Scanning system for installed product [{0} ({1})] with code: {2}" -f $AppName,$arc,$AppValue) -Severity 1 -Outhost
+                            Write-LogEntry ("Scanning system for installed product [{0} ({1})] with code: {2}" -f $AppName,$arc,$AppValue) -Source ${CmdletName}  -Severity 1 -Outhost
                             If(!$ExistingValue){
-                                Write-LogEntry ("CALL FUNCTION :: Get-InstalledProduct -Property '$Property' -Filter '$AppValue' -Arc $arc") -Severity 4 -Outhost
+                                Write-LogEntry ("[CMDLET] Get-InstalledProduct -Property '$Property' -Filter '$AppValue' -Arc $arc") -Source ${CmdletName} -Severity 4 -Outhost
                                 #eg. (Get-InstalledProduct -Property 'GUID' -Filter '{C8EA30FC-B20B-465E-9D8A-CDDC09EA72D4}' -Arc x86).GUID
                                 $ExistingValue = (Get-InstalledProduct -Property $Property -Filter $AppValue -Arc $arc -Verbose:$Global:Verbose).$Property 
                             }
@@ -187,20 +247,20 @@ Function Scan-ExistingApplication{
 
         }
         Catch{
-            Write-LogEntry ("Failed to scan for existing application [{1}] using [{0}] method. Error: {2} " -f $ScanMethod,$AppName,$ExistingValue.Exception.ErrorMessage) -Severity 3 -Outhost
+            Write-LogEntry ("Failed to scan for existing application [{0}] using [{1}] method. Error: {2} " -f $AppName,$ScanMethod,$ExistingValue.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
             If($Global:Verbose){
-                Write-LogEntry ("{0} :: PASSED VARIABLES:" -f $MyInvocation.MyCommand.ToString().ToUpper()) -Severity 4 -Outhost 
-                Write-LogEntry ("`$AppName='{0}'" -f $AppName) -Severity 4 -Outhost 
-                Write-LogEntry ("`$AppPath='{0}'" -f $AppPath) -Severity 4 -Outhost 
-                Write-LogEntry ("`$ScanMethod='{0}'" -f $ScanMethod) -Severity 4 -Outhost 
-                Write-LogEntry ("`$AppValue='{0}'" -f $AppValue) -Severity 4 -Outhost
+                Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$AppName='{0}'" -f $AppName) -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$AppPath='{0}'" -f $AppPath) -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$ScanMethod='{0}'" -f $ScanMethod) -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$AppValue='{0}'" -f $AppValue) -Source ${CmdletName} -Severity 4 -Outhost
             }
             $ExistingValue = $false
         }
     }
     End {
-        Write-LogEntry ("{0} :: PASSED VARIABLES:" -f $MyInvocation.MyCommand.ToString().ToUpper()) -Severity 4 -Outhost 
-        Write-LogEntry ("`$ExistingValue='{0}'" -f $ExistingValue) -Severity 4 -Outhost
+        Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
+        Write-LogEntry ("`$ExistingValue='{0}'" -f $ExistingValue) -Source ${CmdletName} -Severity 4 -Outhost
         return $ExistingValue        
     }
 }
@@ -220,6 +280,12 @@ Function Get-InstalledProduct{
         [switch]$WMIQuery
     )
     Begin{
+        ## Get the name of this function
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+        ## Format Log date entry
+        $DateEntry = Format-DatePrefix
+
         If($Filter){
             #based on property specified, build filter argument scriptblock
             switch($Property){
@@ -228,7 +294,7 @@ Function Get-InstalledProduct{
                "Name"    { If($WMIQuery){$FilterArg = "IdentifyingNumber = '$Filter'"}Else{$FilterArg = [scriptblock]::create("`$_.PSChildName -like '$Filter*'")} } 
                "All"     { If($WMIQuery){$FilterArg = $null}Else{$FilterArg = [scriptblock]::create("`$_.PSPath -like '*'")} }
             }
-            Write-LogEntry ("FILTER :: Filter Used: [{0}]" -f $FilterArg) -Severity 4 -Outhost 
+            Write-LogEntry ("Filter Used: [{0}]" -f $FilterArg) -Severity 4 -Outhost 
         }
         Else{
             If($WMIQuery){$FilterArg = $null}Else{$FilterArg = [scriptblock]::create($_.PSPath -like '*')}
@@ -251,13 +317,13 @@ Function Get-InstalledProduct{
             }
         }
         Catch{
-            Write-LogEntry ("Failed to get product details using [{0}] type. Error: {1} " -f $Property,$Products.Exception.ErrorMessage) -Severity 3 -Outhost
+            Write-LogEntry ("Failed to get product details using [{0}] type. Error: {1} " -f $Property,$Products.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
             If($Global:Verbose){
-                Write-LogEntry ("{0} :: PASSED VARIABLES:" -f $MyInvocation.MyCommand.ToString().ToUpper()) -Severity 4 -Outhost 
-                Write-LogEntry ("Failed to get product details, variables passed:") -Severity 4 -Outhost
-                Write-LogEntry ("`$Property='{0}'" -f $Property) -Severity 4 -Outhost 
-                Write-LogEntry ("`$Filter='{0}'" -f $Filter) -Severity 4 -Outhost 
-                Write-LogEntry ("`$FilterArg='{0}'" -f $FilterArg.ToString()) -Severity 4 -Outhost 
+                Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("Failed to get product details, variables passed:") -Source ${CmdletName} -Severity 4 -Outhost
+                Write-LogEntry ("`$Property='{0}'" -f $Property) -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$Filter='{0}'" -f $Filter) -Source ${CmdletName} -Severity 4 -Outhost 
+                Write-LogEntry ("`$FilterArg='{0}'" -f $FilterArg.ToString()) -Source ${CmdletName} -Severity 4 -Outhost 
             }
            
         }
@@ -278,8 +344,8 @@ Function Get-InstalledProduct{
         }
 
 
-        Write-LogEntry ("{0} :: PASSED VARIABLES:" -f $MyInvocation.MyCommand.ToString().ToUpper()) -Severity 4 -Outhost 
-        Write-LogEntry ("`$InstalledProducts='{0}'" -f $InstalledProducts) -Severity 4 -Outhost
+        Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
+        Write-LogEntry ("`$InstalledProducts='{0}'" -f $InstalledProducts) -Source ${CmdletName} -Severity 4 -Outhost
         return $InstalledProducts
     }
 
@@ -343,6 +409,12 @@ function Process-Application{
         
     )
     begin {
+        ## Get the name of this function
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+        ## Format Log date entry
+        $DateEntry = Format-DatePrefix
+
         #change the action based on the scenario
         Switch ($action) {
 			'Install' {$msglabel = 'Installing'; $msiAction = '/i';$msuAction = '';$mspAction = '/p'}
@@ -350,6 +422,7 @@ function Process-Application{
 			'Update' {$msglabel = 'Updating'; $msiAction = '/update';}
 			'Repair' {$msglabel = 'Repairing'; $msiAction = '/f';}
         }
+        
     }
     process {
         
@@ -370,12 +443,12 @@ function Process-Application{
         }
 
         Try{
-            Write-LogEntry ("{0} [{1}]..." -f $msglabel, $AppName) -Outhost
-            Write-LogEntry ("RUNNING COMMAND: {0}" -f $cmdScriptBlock.ToString()) -Severity 4 -Outhost
+            Write-LogEntry ("{0}; {1}..." -f $AppName,$msglabel) -Source ${CmdletName} -Outhost
+            Write-LogEntry ("RUNNING COMMAND: {0}" -f $cmdScriptBlock.ToString()) -Source ${CmdletName} -Severity 4 -Outhost
             $results = Invoke-Command -ScriptBlock $cmdScriptBlock
         }
         Catch{
-            Write-LogEntry ("Failed to install [{0}] with error message: {1}" -f $AppName,$_.Exception.Message) -Severity 3 -Outhost  
+            Write-LogEntry ("Failed to install [{0}] with error message: {1}" -f $AppName,$_.Exception.Message) -Source ${CmdletName} -Severity 3 -Outhost  
             Exit -1
         }
 
@@ -390,13 +463,13 @@ function Process-Application{
 
         #if the ignore code matches, write status, save errorcode
         If ($results.ExitCode -eq 0) {
-            Write-LogEntry ("Finished installing [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Severity 0 -Outhost
+            Write-LogEntry ("Finished installing [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 0 -Outhost
         }
         ElseIf ($ignoredCode){
-            Write-LogEntry ("Finished installing [{0}] with ignored exitcode: {1}" -f $AppName,$results.ExitCode) -Severity 0 -Outhost
+            Write-LogEntry ("Finished installing [{0}] with ignored exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 0 -Outhost
         }
         Else{
-            Write-LogEntry ("Failed to install [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Severity 3 -Outhost
+            Write-LogEntry ("Failed to install [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 3 -Outhost
             Exit $results.ExitCode
         }
     }
@@ -410,6 +483,7 @@ function Process-Application{
 If (Test-Path -LiteralPath 'variable:HostInvocation') { $InvocationInfo = $HostInvocation } Else { $InvocationInfo = $MyInvocation }
 [string]$scriptDirectory = Split-Path $MyInvocation.MyCommand.Path -Parent
 [string]$scriptName = Split-Path $MyInvocation.MyCommand.Path -Leaf
+$DateEntry = Format-DatePrefix
 
 #Create Paths and variables
 $SourcePath = Join-Path $scriptDirectory -ChildPath Source
@@ -419,7 +493,7 @@ $Global:Verbose = $false
 If($PSBoundParameters.ContainsKey('Debug') -or $PSBoundParameters.ContainsKey('Verbose')){
     $Global:Verbose = $PsBoundParameters.Get_Item('Verbose')
     $VerbosePreference = 'Continue'
-    Write-Verbose ("{0} :: VERBOSE IS ENABLED." -f $scriptName)
+    Write-Verbose ("[{0}] [{1}] :: VERBOSE IS ENABLED." -f $DateEntry,$scriptName)
 }
 Else{
     $VerbosePreference = 'SilentlyContinue'
@@ -434,7 +508,7 @@ Try {
 }
 Catch { 
     $ErrorMsg = $_.Exception.Message
-    Write-Host ("{0} :: Failed to get Settings from [{1}] with error: {2}" -f $scriptName,$SettingsFile,$ErrorMsg) -ForegroundColor Red
+    Write-Host ("[{0}] [{1}] :: Failed to get Settings from [{2}] with error: {3}" -f $DateEntry,$scriptName,$SettingsFile,$ErrorMsg) -ForegroundColor Red
     Exit -1
 }
 
@@ -446,7 +520,7 @@ Try
     $LogPath = $tsenv.Value("_SMSTSLogPath")
 }
 Catch {
-	Write-Warning ("{0} :: TS environment not detected. Assuming stand-alone mode." -f $scriptName)
+	Write-Warning ("[{0}] [{1}] :: TS environment not detected. Assuming stand-alone mode." -f $DateEntry,$scriptName)
 	$LogPath = $env:TEMP
 }
 
@@ -454,7 +528,7 @@ Catch {
 [string]$FileName = $LogName +'.log'
 $Global:LogFilePath = Join-Path -Path $LogPath -ChildPath $FileName
 
-Write-LogEntry ("{0} :: Using Settings File: [{1}]" -f $scriptName,$SettingsFile) -Severity 4 -Outhost
+Write-LogEntry ("Using Settings File: [{0}]" -f $SettingsFile) -Severity 4 -Outhost  
 
 #taking from AppdeployToolkitMain.ps1
 [boolean]$Is64Bit = [boolean]((Get-WmiObject -Class 'Win32_Processor' | Where-Object { $_.DeviceID -eq 'CPU0' } | Select-Object -ExpandProperty 'AddressWidth') -eq 64)
@@ -462,15 +536,18 @@ If ($Is64Bit) { [string]$envOSArchitecture = 'x64' } Else { [string]$envOSArchit
 
 $AppCount = 0
 #Actual Install
-Write-LogEntry ("Installing [{0}] version [{1}]..." -f $Name,$Version) -Severity 4 -Outhost
+Write-LogEntry ("Installing [{0}] version [{1}]..." -f $DateEntry,$scriptName,$Name,$Version) -Severity 4 -Outhost 
 
+##*===============================================
+##* MAIN
+##*===============================================
 foreach ($App in $Settings.xml.Application) {
     $AppCount = $AppCount + 1
     [string]$AppName = $App.Name
     [string]$AppInstaller = $App.Installer
     If($InstallerArg){$AppInstaller = $AppInstaller.Replace("[InstallArgument]",$InstallerArg)}
     If(!($AppInstaller) -or ($AppInstaller -eq '[AUTO]') ){
-        Write-LogEntry ("No Installer Specified, scanning source path [{0}] for file type [{1}]" -f $SourcePath,$App.InstallerType) -Severity 4 -Outhost
+        Write-LogEntry ("No Installer Specified, scanning source path [{0}] for file type [{1}]" -f $SourcePath,$App.InstallerType) -Severity 4 -Outhost 
         $AppInstaller = (Get-ChildItem -Path $SourcePath -Filter *.$($App.InstallerType) -Recurse | Select -First 1).FullName
     }
     [string]$AppInstallerType = $App.InstallerType
@@ -482,7 +559,7 @@ foreach ($App in $Settings.xml.Application) {
     switch -regex ($AppInstallSwitches){
         "\[SourcePath\]"  {$AppInstallSwitches = $AppInstallSwitches.replace("[SourcePath]",$SourcePath)}
         "\[RootPath\]"    {$AppInstallSwitches = $AppInstallSwitches.replace("[RootPath]",$scriptDirectory)}
-        "\[TSEnv-(.*?)\]" {If($AppInstallSwitches -match "\[TSEnv-(.*?)\]"){$AppInstallSwitches = $AppInstallSwitches.replace("[RootPath]",$tsenv.Value($matches[1]))}}
+        "\[TSEnv-(.*?)\]" {If($AppInstallSwitches -match "\[TSEnv-(.*?)\]"){$AppInstallSwitches = $AppInstallSwitches.replace($matches[1],$tsenv.Value($matches[1]))}}
     }
 
     [string]$AppSupportedArc = $App.SupportedArc
@@ -490,7 +567,7 @@ foreach ($App in $Settings.xml.Application) {
     [string]$AppDetectionRule = $App.DetectionRule
     [boolean]$ValidateInstall = [boolean]::Parse($App.ValidateInstall)
     If($DetectionArg){$AppDetectionRule = $AppDetectionRule.Replace("[DetectArgument]",$DetectionArg)}
-    Write-LogEntry ("`r`nProcessing Application {0}" -f $AppCount) -Severity 1 -Outhost
+    Write-LogEntry ("Processing Application {0}" -f $AppCount) -Severity 1 -Outhost
     Write-LogEntry ("==========================") -Severity 1 -Outhost
     Write-LogEntry ("VARIABLE OUTPUT:") -Severity 4 -Outhost
     Write-LogEntry ("-----------------------------------------") -Severity 4 -Outhost
@@ -548,111 +625,120 @@ foreach ($App in $Settings.xml.Application) {
     Write-LogEntry ("`$AppInstallerPath='{0}'" -f $AppInstallerPath) -Severity 4 -Outhost
     Write-LogEntry ("`$AppInstallerType='{0}'" -f $AppInstallerType) -Severity 4 -Outhost
 
-    switch($AppDetectionType){
-        #Build Detection Rules for REG, then split rule to grab registry Keypath, KeyName, and KeyValue
-        #eg. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Signature Updates,AVSignatureVersion,[Version]
-        'REG' {
-                #Split the rules into parts
-                $AppDetectionRuleArray = $AppDetectionRule.Split(",")
-                If ($AppDetectionRuleArray[2]){ 
-                    [string]$AppDetectionPath = $AppDetectionRuleArray[0]
-                    [string]$AppDetectionName = $AppDetectionRuleArray[1]
-                    $AppDetectionValue = $AppDetectionRuleArray[2]
-                } 
-                Else{
-                    [string]$AppDetectionPath = $AppDetectionRuleArray[0]
-                    [string]$AppDetectionName = $AppDetectionRuleArray[1]
-                    $AppDetectionValue = $AppInstaller
-                }
-        }
-
-        #Build Detection Rules for FILE, then split rule to grab Path, Name, and value
-        #eg. C:\Program Files (x86)\Java\jre1.8.0_181\bin,java.exe,[Version]
-        'FILE' {
-                #Split the rules into parts
-                $AppDetectionRuleArray = $AppDetectionRule.Split(",")
-
-                #if rule is empty or just [AUTO], use installer property for details
-                If(!$AppDetectionRule -or ($AppDetectionRule -match '\[AUTO\]') ){
-                    [string]$AppDetectionPath = Split-Path $AppInstallerPath -Parent
-                    [string]$AppDetectionName = Split-Path $AppInstallerPath -Leaf
-                }
-                Else{
-                    #build first two items from rule
-                    [string]$AppDetectionPath = $AppDetectionRuleArray[0]
-                    [string]$AppDetectionName = $AppDetectionRuleArray[1]
-                }
-
-                #check if rule has a third item
-                If ($AppDetectionRuleArray[2]){ 
-                    $AppDetectionValue = $AppDetectionRuleArray[2]
-                } 
-                Else{
-                    $AppDetectionValue = $AppInstaller
-                }
-        }
-
-        #Build Detection Rules for GUID, then split to grab guid and value
-        #eg. {3dec9467-d9ad-42df-8e84-888057bac8f1},[Version]
-        'GUID' {
-                #Split the rules into parts
-                $AppDetectionRuleArray = $AppDetectionRule.Split(",")
-
-                #if rule is empty or just [AUTO], read msi tables for details
-                If(!$AppDetectionRule -or ($AppDetectionRule -match '\[AUTO\]') -and [System.IO.Path]::GetExtension($AppInstallerPath) -eq '.msi' ){
-                    #default rule for GUID
-                    $AppDetectionRule = "$AppInstallerPath,[Name]"
-                    Write-LogEntry ("CALL FUNCTION :: Get-MSIProperties -Path $AppInstallerPath") -Severity 4 -Outhost
-                    $MSIProperties = Get-MSIProperties -Path $AppInstallerPath
-                    $MSIPropCode = $MSIProperties.ProductCode
-
-                    $AppDetectionPath = "[AUTO]"
-                    $AppDetectionName = "[GUID]"
-                    $AppDetectionValue = $MSIPropCode
-                }
-                #if rule has a guid in it but its not an MSI (eg. exe bootstrapper)
-                ElseIf($AppDetectionRule -match '{[-0-9A-F]+?}'){
-                    $AppDetectionPath = "[AUTO]"
-                    $AppDetectionName = "[GUID]"
-                    $AppDetectionValue = $Matches[0]
-                }
-                Else{
-                    [string]$AppDetectionPath = $AppDetectionRuleArray[0]
-                    If ($AppDetectionRuleArray[1]){
-                        [string]$AppDetectionName = $AppDetectionRuleArray[0]
-                        $AppDetectionValue = $AppDetectionRuleArray[1]
-                    }
-
-                    If ($AppDetectionRuleArray[2]){
+    If($AppDetectionRule){
+        switch($AppDetectionType){
+            #Build Detection Rules for REG, then split rule to grab registry Keypath, KeyName, and KeyValue
+            #eg. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Signature Updates,AVSignatureVersion,[Version]
+            'REG' {
+                    #Split the rules into parts
+                    $AppDetectionRuleArray = $AppDetectionRule.Split(",")
+                    If ($AppDetectionRuleArray[2]){ 
+                        [string]$AppDetectionPath = $AppDetectionRuleArray[0]
                         [string]$AppDetectionName = $AppDetectionRuleArray[1]
                         $AppDetectionValue = $AppDetectionRuleArray[2]
+                    } 
+                    Else{
+                        [string]$AppDetectionPath = $AppDetectionRuleArray[0]
+                        [string]$AppDetectionName = $AppDetectionRuleArray[1]
+                        $AppDetectionValue = $AppInstaller
                     }
-                }
+            }
+
+            #Build Detection Rules for FILE, then split rule to grab Path, Name, and value
+            #eg. C:\Program Files (x86)\Java\jre1.8.0_181\bin,java.exe,[Version]
+            'FILE' {
+                    #Split the rules into parts
+                    $AppDetectionRuleArray = $AppDetectionRule.Split(",")
+
+                    #if rule is empty or just [AUTO], use installer property for details
+                    If(!$AppDetectionRule -or ($AppDetectionRule -match '\[AUTO\]') ){
+                        [string]$AppDetectionPath = Split-Path $AppInstallerPath -Parent
+                        [string]$AppDetectionName = Split-Path $AppInstallerPath -Leaf
+                    }
+                    Else{
+                        #build first two items from rule
+                        [string]$AppDetectionPath = $AppDetectionRuleArray[0]
+                        [string]$AppDetectionName = $AppDetectionRuleArray[1]
+                    }
+
+                    #check if rule has a third item
+                    If ($AppDetectionRuleArray[2]){ 
+                        $AppDetectionValue = $AppDetectionRuleArray[2]
+                    } 
+                    Else{
+                        $AppDetectionValue = $AppInstaller
+                    }
+            }
+
+            #Build Detection Rules for GUID, then split to grab guid and value
+            #eg. {3dec9467-d9ad-42df-8e84-888057bac8f1},[Version]
+            'GUID' {
+                    #Split the rules into parts
+                    $AppDetectionRuleArray = $AppDetectionRule.Split(",")
+
+                    #if rule is empty or just [AUTO], read msi tables for details
+                    If(!$AppDetectionRule -or ($AppDetectionRule -match '\[AUTO\]') -and [System.IO.Path]::GetExtension($AppInstallerPath) -eq '.msi' ){
+                        #default rule for GUID
+                        $AppDetectionRule = "$AppInstallerPath,[Name]"
+                        Write-LogEntry ("[CMDLET] Get-MSIProperties -Path $AppInstallerPath") -Severity 4 -Outhost
+                        $MSIProperties = Get-MSIProperties -Path $AppInstallerPath
+                        $MSIPropCode = $MSIProperties.ProductCode
+
+                        $AppDetectionPath = "[AUTO]"
+                        $AppDetectionName = "[GUID]"
+                        $AppDetectionValue = $MSIPropCode
+                    }
+                    #if rule has a guid in it but its not an MSI (eg. exe bootstrapper)
+                    ElseIf($AppDetectionRule -match '{[-0-9A-F]+?}'){
+                        $AppDetectionPath = "[AUTO]"
+                        $AppDetectionName = "[GUID]"
+                        $AppDetectionValue = $Matches[0]
+                    }
+                    Else{
+                        [string]$AppDetectionPath = $AppDetectionRuleArray[0]
+                        If ($AppDetectionRuleArray[1]){
+                            [string]$AppDetectionName = $AppDetectionRuleArray[0]
+                            $AppDetectionValue = $AppDetectionRuleArray[1]
+                        }
+
+                        If ($AppDetectionRuleArray[2]){
+                            [string]$AppDetectionName = $AppDetectionRuleArray[1]
+                            $AppDetectionValue = $AppDetectionRuleArray[2]
+                        }
+                    }
+            }
         }
-    }
 
-    #Process Dynamic Values if found
-    switch -regex ($AppDetectionValue){
-        "\[ValueArg\]"           {If($ValueArg){$AppDetectionValue = $ValueArg}}
-        "\[Name\]"               {$AppDetectionValue = $AppName}
-        "\[Version\]"            {$AppDetectionValue = $Version}
-        "\[Version-(\d)\]"       {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.Substring(0,$Version.Length-$matches[0])}}
-        "\[(\d)\-Version\]"      {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.substring($matches[0])}}
-        "\[(\d)\-Version-(\d)\]" {If($AppDetectionValue -match "(\d)-Version-(\d)"){$LastDigit = $Version.Substring(0,$Version.Length-$matches[1]);$AppDetectionValue = $LastDigit.substring($matches[2])}} 
-    }
-
+        #Process Dynamic Values if found
+        switch -regex ($AppDetectionValue){
+            "\[ValueArg\]"           {If($ValueArg){$AppDetectionValue = $ValueArg}}
+            "\[Name\]"               {$AppDetectionValue = $AppName}
+            "\[Version\]"            {$AppDetectionValue = $Version}
+            "\[Version-(\d)\]"       {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.Substring(0,$Version.Length-$matches[0])}}
+            "\[(\d)\-Version\]"      {If($AppDetectionValue -match "\d"){$AppDetectionValue = $Version.substring($matches[0])}}
+            "\[(\d)\-Version-(\d)\]" {If($AppDetectionValue -match "(\d)-Version-(\d)"){$LastDigit = $Version.Substring(0,$Version.Length-$matches[1]);$AppDetectionValue = $LastDigit.substring($matches[2])}} 
+        }
+    
     Write-LogEntry ("`$AppDetectionPath='{0}'" -f $AppDetectionPath) -Severity 4 -Outhost
     Write-LogEntry ("`$AppDetectionName='{0}'" -f $AppDetectionName) -Severity 4 -Outhost
     Write-LogEntry ("`$AppDetectionValue='{0}'" -f $AppDetectionValue) -Severity 4 -Outhost
     Write-LogEntry ("-----------------------------------------") -Severity 4 -Outhost
 
-    #scan the system for the application
-    Write-LogEntry ("CALL FUNCTION :: Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath '$AppDetectionPath' -AppName '$AppDetectionName' -AppValue '$AppDetectionValue' -AppArc $AppSupportedArc") -Severity 4 -Outhost
-    $AppExists = Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath "$AppDetectionPath" -AppName "$AppDetectionName" -AppValue "$AppDetectionValue" -AppArc $AppSupportedArc -Verbose:$Global:Verbose
-    #$AppExists = Scan-ExistingApplication -ScanMethod GUID -AppPath '[AUTO]' -AppName '[GUID]' -AppValue '{C8EA30FC-B20B-465E-9D8A-CDDC09EA72D4}' -AppArc x86
-    Write-LogEntry ("`$AppExists='{0}'" -f $AppExists) -Severity 4 -Outhost
+        #scan the system for the application
+        Write-LogEntry ("[CMDLET] Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath '$AppDetectionPath' -AppName '$AppDetectionName' -AppValue '$AppDetectionValue' -AppArc $AppSupportedArc") -Severity 4 -Outhost
+        $AppExists = Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath "$AppDetectionPath" -AppName "$AppDetectionName" -AppValue "$AppDetectionValue" -AppArc $AppSupportedArc -Verbose:$Global:Verbose
+        #$AppExists = Scan-ExistingApplication -ScanMethod GUID -AppPath '[AUTO]' -AppName '[GUID]' -AppValue '{C8EA30FC-B20B-465E-9D8A-CDDC09EA72D4}' -AppArc x86
+        Write-LogEntry ("`$AppExists='{0}'" -f $AppExists) -Severity 4 -Outhost
+    }
+    Else{
+        #Since now Detection Rule was specified always assume its not installed
+        Write-LogEntry ("Detection Rule not specified, Assuming application is not installed..." ) -Severity 4 -Outhost
+        $AppExists = $False
+    }
 
-    #determine if app is configured to be uninstalled or installed
+    ##*===============================================
+	##* UNINSTALLATION SECTION
+	##*===============================================
     If($AppInstallerAction -eq 'Uninstall'){
         
         If(!$AppExists){
@@ -692,11 +778,11 @@ foreach ($App in $Settings.xml.Application) {
         }
 
         #Uninstall Application
-        Process-Application -Type $AppInstallerType -Action Uninstall -Name $AppName -Path $UninstallPath -Arguments $AppInstallSwitches -IgnoreExitCodes $IgnoreExitCodes -Verbose:$Global:Verbose
+        $Result = Process-Application -Type $AppInstallerType -Action Uninstall -Name $AppName -Path $UninstallPath -Arguments $AppInstallSwitches -IgnoreExitCodes $IgnoreExitCodes -Verbose:$Global:Verbose
 
-        If ( $ValidateInstall ){
+        If ( $ValidateInstall -and $Result){
             #check if ether ExistingValue is true or has a value
-            Write-LogEntry ("CALL FUNCTION :: Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath '$AppDetectionPath' -AppName '$AppDetectionName' -AppValue '$AppDetectionValue' -AppArc $AppSupportedArc") -Severity 4 -Outhost
+            Write-LogEntry ("[CMDLET] Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath '$AppDetectionPath' -AppName '$AppDetectionName' -AppValue '$AppDetectionValue' -AppArc $AppSupportedArc") -Severity 4 -Outhost
             $AppExists = Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath $AppDetectionPath -AppName $AppDetectionName -AppValue $AppDetectionValue  -AppArc $AppSupportedArc -Verbose:$Global:Verbose
 
             If($AppExists){
@@ -706,8 +792,11 @@ foreach ($App in $Settings.xml.Application) {
         }
 
     }
-    Else{
 
+    ##*===============================================
+	##* INSTALLATION SECTION
+	##*===============================================
+    Else{
         $InstalledAlready = $false
 
         If($AppExists){
@@ -743,7 +832,7 @@ foreach ($App in $Settings.xml.Application) {
         # Compare architecture to Operating System if x86
         If ( ($AppSupportedArc -eq 'x86' -and $envOSArchitecture -eq 'x86') -or ($AppSupportedArc -eq 'x86' -and $envOSArchitecture -eq 'x64') -or ($AppSupportedArc -eq 'x64' -and $envOSArchitecture -eq 'x64') -or ($AppSupportedArc -eq "Both") ) {
             #Install Application
-            If(!$InstalledAlready){Process-Application -Type $AppInstallerType -Action $AppInstallerAction -Name $AppName -Path $AppInstallerPath -Arguments $AppInstallSwitches -IgnoreExitCodes $IgnoreExitCodes -Verbose:$Global:Verbose}
+            If(!$InstalledAlready){$Result = Process-Application -Type $AppInstallerType -Action $AppInstallerAction -Name $AppName -Path $AppInstallerPath -Arguments $AppInstallSwitches -IgnoreExitCodes $IgnoreExitCodes -Verbose:$Global:Verbose}
         }
         Else{
             Write-LogEntry ("Application [{0}] identified architecture is [{1}] which does not match current OS architecture [{2}]. Unable to install." -f $AppName,$AppSupportedArc,$envOSArchitecture) -Severity 2 -Outhost
@@ -754,8 +843,11 @@ foreach ($App in $Settings.xml.Application) {
 
     Write-LogEntry ("Validation after install is set to [{0}]" -f $App.ValidateInstall) -Severity 4 -Outhost
 
+    ##*===============================================
+	##* VALIDATION SECTION
+	##*===============================================
     #run Validation check if enabled
-    If ( $ValidateInstall ){
+    If ( $ValidateInstall -and !$InstalledAlready -and $Result){
         #check if ether ExistingValue is true or has a value
         $AppExists = Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath $AppDetectionPath -AppName $AppDetectionName -AppValue $AppDetectionValue -AppArc $AppSupportedArc -Verbose:$Global:Verbose
  
