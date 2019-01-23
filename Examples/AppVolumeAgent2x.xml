@@ -1,0 +1,20 @@
+<xml>
+	<Details>
+		<InstallName>Install-AppVolumeAgent</InstallName>
+		<Name>App Volumes Agent</Name>
+		<Version>2.14.2.9</Version>
+	</Details>
+	
+	<Application>
+		<Name>VMWare App Volumes Agent</Name>
+		<Installer>[AUTO]</Installer>
+		<InstallerType>MSI</InstallerType>
+		<InstallSwitches>/qn MANAGER_ADDR=[SwitchArgument] MANAGER_PORT=80 REBOOTREQUIRED=0 RebootYesNo=No</InstallSwitches>
+		<SupportedArc>x86</SupportedArc>
+		<DetectionType>GUID</DetectionType>
+		<DetectionRule>[AUTO],[Version]</DetectionRule>
+		<IgnoreExitCodes>3010</IgnoreExitCodes>
+		<ValidateInstall>False</ValidateInstall>
+	</Application>
+	
+</xml>
