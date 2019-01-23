@@ -1,0 +1,21 @@
+<xml>
+
+	<Details>
+		<InstallName>Install-ViewAgent</InstallName>
+		<Name>VMware Horizon Agent</Name>
+		<Version>7.6.0</Version>
+	</Details>
+
+	<Application>
+		<Name>VMware Horizon Agent</Name>
+		<Installer>[AUTO]</Installer>
+		<InstallerType>EXE</InstallerType>
+		<InstallSwitches>/s /v"/qn VDM_VC_MANAGED_AGENT=1 VDM_FIPS_ENABLED=1 INSTALL_VDISPLAY_DRIVER=1 ADDLOCAL=Core,ThinPrint,USB,NGVC,RTAV,SmartCard"</InstallSwitches>
+		<SupportedArc>x64</SupportedArc>
+		<DetectionType>File</DetectionType>
+		<DetectionRule>{3B01A133-6946-4D78-B923-B216E5CE7DE5},[Version]</DetectionRule>
+		<IgnoreExitCodes>3010</IgnoreExitCodes>
+		<ValidateInstall>False</ValidateInstall>
+	</Application>
+	
+</xml>
