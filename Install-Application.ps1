@@ -18,7 +18,7 @@
 .EXAMPLE
 	Install-Application.ps1 -SettingsName 7Zip.xml
 .EXAMPLE
-	Deploy-Application.ps1 -InstallerArg ""
+	Deploy-Application.ps1 -InstallerArg "/qn"
 .EXAMPLE
 	Install-Application.ps1 -DeploymentType Uninstall
 #>
@@ -27,11 +27,11 @@ Param (
     [Parameter(Mandatory=$false)]
     [string]$SettingsName = "Settings.xml",
     [Parameter(Mandatory=$false)]
-    $InstallerArg,
+    [string]$InstallerArg,
     [Parameter(Mandatory=$false)]
-    $SwitchArg,
+    [string]$SwitchArg,
     [Parameter(Mandatory=$false)]
-    $DetectionArg
+    [string]$DetectionArg
 )
 
 ##*===========================================================================
@@ -54,7 +54,7 @@ Function Format-DatePrefix{
     return ($LogDate + " " + $LogTime)
 }
 
-function Write-LogEntry {
+Function Write-LogEntry {
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [ValidateNotNullOrEmpty()]
@@ -135,6 +135,71 @@ Function Get-RegistryRoot($RegPath){
         HKEY_CURRENT_USER {$RegProperty = 'HKCU:'}
     }
     return $RegProperty
+}
+
+Function Get-FriendlyMsiExecMsg($exit) {
+    Switch($exit){
+      0    {$meaning = 'ERROR_SUCCESS'; $description = 'The action completed successfully.'}
+      13   {$meaning = 'ERROR_INVALID_DATA'; $description = 'The data is invalid.'}
+      87   {$meaning = 'ERROR_INVALID_PARAMETER'; $description = 'One of the parameters was invalid.'}
+      120  {$meaning = 'ERROR_CALL_NOT_IMPLEMENTED'; $description = 'This value is returned when a custom action attempts to call a function that cannot be called from custom actions. The function returns the value ERROR_CALL_NOT_IMPLEMENTED. Available beginning with Windows Installer version 3.0.'}
+      1259 {$meaning = 'ERROR_APPHELP_BLOCK'; $description = 'If Windows Installer determines a product may be incompatible with the current operating system, it displays a dialog box informing the user and asking whether to try to install anyway. This error code is returned if the user chooses not to try the installation.'}
+      1601 {$meaning = 'ERROR_INSTALL_SERVICE_FAILURE'; $description = 'The Windows Installer service could not be accessed. Contact your support personnel to verify that the Windows Installer service is properly registered.'}
+      1602 {$meaning = 'ERROR_INSTALL_USEREXIT'; $description = 'The user cancels installation.'}
+      1603 {$meaning = 'ERROR_INSTALL_FAILURE'; $description = 'A fatal error occurred during installation.'}
+      1604 {$meaning = 'ERROR_INSTALL_SUSPEND'; $description = 'Installation suspended, incomplete.'}
+      1605 {$meaning = 'ERROR_UNKNOWN_PRODUCT'; $description = 'This action is only valid for products that are currently installed.'}
+      1606 {$meaning = 'ERROR_UNKNOWN_FEATURE'; $description = 'The feature identifier is not registered.'}
+      1607 {$meaning = 'ERROR_UNKNOWN_COMPONENT'; $description = 'The component identifier is not registered.'}
+      1608 {$meaning = 'ERROR_UNKNOWN_PROPERTY'; $description = 'This is an unknown property.'}
+      1609 {$meaning = 'ERROR_INVALID_HANDLE_STATE'; $description = 'The handle is in an invalid state.'}
+      1610 {$meaning = 'ERROR_BAD_CONFIGURATION'; $description = 'The configuration data for this product is corrupt. Contact your support personnel.'}
+      1611 {$meaning = 'ERROR_INDEX_ABSENT'; $description = 'The component qualifier not present.'}
+      1612 {$meaning = 'ERROR_INSTALL_SOURCE_ABSENT'; $description = 'The installation source for this product is not available. Verify that the source exists and that you can access it.'}
+      1613 {$meaning = 'ERROR_INSTALL_PACKAGE_VERSION'; $description = 'This installation package cannot be installed by the Windows Installer service. You must install a Windows service pack that contains a newer version of the Windows Installer service.'}
+      1614 {$meaning = 'ERROR_PRODUCT_UNINSTALLED'; $description = 'The product is uninstalled.'}
+      1615 {$meaning = 'ERROR_BAD_QUERY_SYNTAX'; $description = 'The SQL query syntax is invalid or unsupported.'}
+      1616 {$meaning = 'ERROR_INVALID_FIELD'; $description = 'The record field does not exist.'}
+      1618 {$meaning = 'ERROR_INSTALL_ALREADY_RUNNING'; $description = 'Another installation is already in progress. Complete that installation before proceeding with this install.'}
+      1619 {$meaning = 'ERROR_INSTALL_PACKAGE_OPEN_FAILED'; $description = 'This installation package could not be opened. Verify that the package exists and is accessible, or contact the application vendor to verify that this is a valid Windows Installer package.'}
+      1620 {$meaning = 'ERROR_INSTALL_PACKAGE_INVALID'; $description = 'This installation package could not be opened. Contact the application vendor to verify that this is a valid Windows Installer package.'}
+      1621 {$meaning = 'ERROR_INSTALL_UI_FAILURE'; $description = 'There was an error starting the Windows Installer service user interface. Contact your support personnel.'}
+      1622 {$meaning = 'ERROR_INSTALL_LOG_FAILURE'; $description = 'There was an error opening installation log file. Verify that the specified log file location exists and is writable.'}
+      1623 {$meaning = 'ERROR_INSTALL_LANGUAGE_UNSUPPORTED'; $description = 'This language of this installation package is not supported by your system.'}
+      1624 {$meaning = 'ERROR_INSTALL_TRANSFORM_FAILURE'; $description = 'There was an error applying transforms. Verify that the specified transform paths are valid.'}
+      1625 {$meaning = 'ERROR_INSTALL_PACKAGE_REJECTED'; $description = 'This installation is forbidden by system policy. Contact your system administrator.'}
+      1626 {$meaning = 'ERROR_FUNCTION_NOT_CALLED'; $description = 'The function could not be executed.'}
+      1627 {$meaning = 'ERROR_FUNCTION_FAILED'; $description = 'The function failed during execution.'}
+      1628 {$meaning = 'ERROR_INVALID_TABLE'; $description = 'An invalid or unknown table was specified.'}
+      1629 {$meaning = 'ERROR_DATATYPE_MISMATCH'; $description = 'The data supplied is the wrong type.'}
+      1630 {$meaning = 'ERROR_UNSUPPORTED_TYPE'; $description = 'Data of this type is not supported.'}
+      1631 {$meaning = 'ERROR_CREATE_FAILED'; $description = 'The Windows Installer service failed to start. Contact your support personnel.'}
+      1632 {$meaning = 'ERROR_INSTALL_TEMP_UNWRITABLE'; $description = 'The Temp folder is either full or inaccessible. Verify that the Temp folder exists and that you can write to it.'}
+      1633 {$meaning = 'ERROR_INSTALL_PLATFORM_UNSUPPORTED'; $description = 'This installation package is not supported on this platform. Contact your application vendor.'}
+      1634 {$meaning = 'ERROR_INSTALL_NOTUSED'; $description = 'Component is not used on this machine.'}
+      1635 {$meaning = 'ERROR_PATCH_PACKAGE_OPEN_FAILED'; $description = 'This patch package could not be opened. Verify that the patch package exists and is accessible, or contact the application vendor to verify that this is a valid Windows Installer patch package.'}
+      1636 {$meaning = 'ERROR_PATCH_PACKAGE_INVALID'; $description = 'This patch package could not be opened. Contact the application vendor to verify that this is a valid Windows Installer patch package.'}
+      1637 {$meaning = 'ERROR_PATCH_PACKAGE_UNSUPPORTED'; $description = 'This patch package cannot be processed by the Windows Installer service. You must install a Windows service pack that contains a newer version of the Windows Installer service.'}
+      1638 {$meaning = 'ERROR_PRODUCT_VERSION'; $description = 'Another version of this product is already installed. Installation of this version cannot continue. To configure or remove the existing version of this product, use Add/Remove Programs in Control Panel.'}
+      1639 {$meaning = 'ERROR_INVALID_COMMAND_LINE'; $description = 'Invalid command line argument. Consult the Windows Installer SDK for detailed command-line help.'}
+      1640 {$meaning = 'ERROR_INSTALL_REMOTE_DISALLOWED'; $description = 'The current user is not permitted to perform installations from a client session of a server running the Terminal Server role service.'}
+      1641 {$meaning = 'ERROR_SUCCESS_REBOOT_INITIATED'; $description = 'The installer has initiated a restart. This message is indicative of a success.'}
+      1642 {$meaning = 'ERROR_PATCH_TARGET_NOT_FOUND'; $description = 'The installer cannot install the upgrade patch because the program being upgraded may be missing or the upgrade patch updates a different version of the program. Verify that the program to be upgraded exists on your computer and that you have the correct upgrade patch.'}
+      1643 {$meaning = 'ERROR_PATCH_PACKAGE_REJECTED'; $description = 'The patch package is not permitted by system policy.'}
+      1644 {$meaning = 'ERROR_INSTALL_TRANSFORM_REJECTED'; $description = 'One or more customizations are not permitted by system policy.'}
+      1645 {$meaning = 'ERROR_INSTALL_REMOTE_PROHIBITED'; $description = 'Windows Installer does not permit installation from a Remote Desktop Connection.'}
+      1646 {$meaning = 'ERROR_PATCH_REMOVAL_UNSUPPORTED'; $description = 'The patch package is not a removable patch package. Available beginning with Windows Installer version 3.0.'}
+      1647 {$meaning = 'ERROR_UNKNOWN_PATCH'; $description = 'The patch is not applied to this product. Available beginning with Windows Installer version 3.0.'}
+      1648 {$meaning = 'ERROR_PATCH_NO_SEQUENCE'; $description = 'No valid sequence could be found for the set of patches. Available beginning with Windows Installer version 3.0.'}
+      1649 {$meaning = 'ERROR_PATCH_REMOVAL_DISALLOWED'; $description = 'Patch removal was disallowed by policy. Available beginning with Windows Installer version 3.0.'}
+      1650 {$meaning = 'ERROR_INVALID_PATCH_XML'; $description = 'The XML patch data is invalid. Available beginning with Windows Installer version 3.0.'}
+      1651 {$meaning = 'ERROR_PATCH_MANAGED_ADVERTISED_PRODUCT'; $description = 'Administrative user failed to apply patch for a per-user managed or a per-machine application that is in advertise state. Available beginning with Windows Installer version 3.0.'}
+      1652 {$meaning = 'ERROR_INSTALL_SERVICE_SAFEBOOT'; $description = 'Windows Installer is not accessible when the computer is in Safe Mode. Exit Safe Mode and try again or try using System Restore to return your computer to a previous state. Available beginning with Windows Installer version 4.0.'}
+      1653 {$meaning = 'ERROR_ROLLBACK_DISABLED'; $description = 'Could not perform a multiple-package transaction because rollback has been disabled. Multiple-Package Installations cannot run if rollback is disabled. Available beginning with Windows Installer version 4.5.'}
+      1654 {$meaning = 'ERROR_INSTALL_REJECTED'; $description = 'The app that you are trying to run is not supported on this version of Windows. A Windows Installer package, patch, or transform that has not been signed by Microsoft cannot be installed on an ARM computer.'}
+      3010 {$meaning = 'ERROR_SUCCESS_REBOOT_REQUIRED'; $description = 'A restart is required to complete the install. This message is indicative of a success. This does not include installs where the ForceReboot action is run.'}
+    }
+    return ("[{0}] {1}" -f $meaning,$description)
 }
 
 
@@ -234,7 +299,7 @@ Function Scan-ExistingApplication{
                           }
                     #look for 1 properties from array        
                     "GUID"{
-                            Write-LogEntry ("Scanning system for installed product [{0} ({1})] with code: {2}" -f $AppName,$arc,$AppValue) -Source ${CmdletName}  -Severity 1 -Outhost
+                            Write-LogEntry ("Scanning [{0}] applications for [{1}] for installed product code [{2}]" -f $arc,$AppName,$AppValue) -Source ${CmdletName}  -Severity 1 -Outhost
                             If(!$ExistingValue){
                                 Write-LogEntry ("[CMDLET] Get-InstalledProduct -Property '$Property' -Filter '$AppValue' -Arc $arc") -Source ${CmdletName} -Severity 4 -Outhost
                                 #eg. (Get-InstalledProduct -Property 'GUID' -Filter '{C8EA30FC-B20B-465E-9D8A-CDDC09EA72D4}' -Arc x86).GUID
@@ -247,7 +312,7 @@ Function Scan-ExistingApplication{
 
         }
         Catch{
-            Write-LogEntry ("Failed to scan for existing application [{0}] using [{1}] method. Error: {2} " -f $AppName,$ScanMethod,$ExistingValue.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
+            Write-LogEntry ("Failed to scan for existing application [{0}] using  method type [{1}]. Error: {2} " -f $AppName,$ScanMethod,$ExistingValue.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
             If($Global:Verbose){
                 Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
                 Write-LogEntry ("`$AppName='{0}'" -f $AppName) -Source ${CmdletName} -Severity 4 -Outhost 
@@ -307,17 +372,17 @@ Function Get-InstalledProduct{
         Try{
             If($WMIQuery){
                 Write-Warning "WMI Queries can take a long time to process and only pulls products installed by MSI. Please be patient..."
-                Write-LogEntry ("WMI COMMAND: Select * From Win32_product WHERE '$FilterArg'") -Severity 4 -Outhost 
+                Write-LogEntry ("[WMI] Select * From Win32_product WHERE '$FilterArg'") -Severity 4 -Outhost 
                 $Products = Get-WmiObject Win32_Product -Filter $FilterArg
             }
             Else{
                 If( ($Arc -eq 'x86') -and $Is64Bit){[string]$regArchPath = '\WOW6432Node\'} Else { [string]$regArchPath = '\' }
-                Write-LogEntry ("REGISTRY SEARCH: [HKLM:\SOFTWARE{0}Microsoft\Windows\CurrentVersion\Uninstall] where {1}" -f $regArchPath,$FilterArg.ToString().replace('$_.','')) -Severity 4 -Outhost 
+                Write-LogEntry ("[REGISTRY] [HKLM:\SOFTWARE{0}Microsoft\Windows\CurrentVersion\Uninstall] where {1}" -f $regArchPath,$FilterArg.ToString().replace('$_.','')) -Severity 4 -Outhost 
                 $Products = Get-ChildItem ("HKLM:\SOFTWARE" + $regArchPath + "Microsoft\Windows\CurrentVersion\Uninstall") | ForEach-Object{ Get-ItemProperty $_.PSPath } | Where $FilterArg
             }
         }
         Catch{
-            Write-LogEntry ("Failed to get product details using [{0}] type. Error: {1} " -f $Property,$Products.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
+            Write-LogEntry ("Failed to get product details using method type [{0}]. Error: {1} " -f $Property,$Products.Exception.ErrorMessage) -Source ${CmdletName} -Severity 3 -Outhost
             If($Global:Verbose){
                 Write-LogEntry ("PASSED VARIABLES:") -Source ${CmdletName} -Severity 4 -Outhost 
                 Write-LogEntry ("Failed to get product details, variables passed:") -Source ${CmdletName} -Severity 4 -Outhost
@@ -352,7 +417,7 @@ Function Get-InstalledProduct{
 }
 
 
-function Get-MSIProperties {
+Function Get-MSIProperties {
     param (
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -392,7 +457,7 @@ function Get-MSIProperties {
     }
 }
 
-function Process-Application{
+Function Process-Application{
     param(
         [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -443,9 +508,12 @@ function Process-Application{
         }
 
         Try{
-            Write-LogEntry ("{0}; {1}..." -f $AppName,$msglabel) -Source ${CmdletName} -Outhost
+            Write-LogEntry ("{1} {0}..." -f $AppName,$msglabel) -Source ${CmdletName} -Outhost
             Write-LogEntry ("RUNNING COMMAND: {0}" -f $cmdScriptBlock.ToString()) -Source ${CmdletName} -Severity 4 -Outhost
+            $time = [System.Diagnostics.Stopwatch]::StartNew()
             $results = Invoke-Command -ScriptBlock $cmdScriptBlock
+            $time.Stop()
+            $sw = Format-ElapsedTime($time.Elapsed)
         }
         Catch{
             Write-LogEntry ("Failed to install [{0}] with error message: {1}" -f $AppName,$_.Exception.Message) -Source ${CmdletName} -Severity 3 -Outhost  
@@ -461,15 +529,18 @@ function Process-Application{
             If($results.ExitCode -eq $code){$ignoredCode = $code}
         }
 
+        $friendlyExitCode = Get-FriendlyMsiExecMsg($results.ExitCode)
+
         #if the ignore code matches, write status, save errorcode
         If ($results.ExitCode -eq 0) {
-            Write-LogEntry ("Finished installing [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 0 -Outhost
+            If($Global:Verbose){Write-LogEntry ("Finished installing [{0}] with exitcode: {1}. Install took {2}" -f $AppName,$results.ExitCode,$sw) -Source ${CmdletName} -Severity 4 -Outhost}
+            Else{Write-LogEntry ("Finished installing [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 0 -Outhost}
         }
         ElseIf ($ignoredCode){
-            Write-LogEntry ("Finished installing [{0}] with ignored exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 0 -Outhost
+            Write-LogEntry ("Finished installing [{0}] with ignored exitcode: {1} {2}" -f $AppName,$results.ExitCode,$friendlyExitCode) -Source ${CmdletName} -Severity 0 -Outhost
         }
         Else{
-            Write-LogEntry ("Failed to install [{0}] with exitcode: {1}" -f $AppName,$results.ExitCode) -Source ${CmdletName} -Severity 3 -Outhost
+            Write-LogEntry ("Failed to install [{0}] with exitcode: {1} {2}" -f $AppName,$results.ExitCode,$friendlyExitCode) -Source ${CmdletName} -Severity 3 -Outhost
             Exit $results.ExitCode
         }
     }
@@ -685,15 +756,17 @@ foreach ($App in $Settings.xml.Application) {
                         $MSIPropCode = $MSIProperties.ProductCode
 
                         $AppDetectionPath = "[AUTO]"
-                        $AppDetectionName = "[GUID]"
+                        $AppDetectionName = $AppName
                         $AppDetectionValue = $MSIPropCode
                     }
+
                     #if rule has a guid in it but its not an MSI (eg. exe bootstrapper)
                     ElseIf($AppDetectionRule -match '{[-0-9A-F]+?}'){
                         $AppDetectionPath = "[AUTO]"
-                        $AppDetectionName = "[GUID]"
+                        $AppDetectionName = $AppName
                         $AppDetectionValue = $Matches[0]
                     }
+
                     Else{
                         [string]$AppDetectionPath = $AppDetectionRuleArray[0]
                         If ($AppDetectionRuleArray[1]){
@@ -719,10 +792,10 @@ foreach ($App in $Settings.xml.Application) {
             "\[(\d)\-Version-(\d)\]" {If($AppDetectionValue -match "(\d)-Version-(\d)"){$LastDigit = $Version.Substring(0,$Version.Length-$matches[1]);$AppDetectionValue = $LastDigit.substring($matches[2])}} 
         }
     
-    Write-LogEntry ("`$AppDetectionPath='{0}'" -f $AppDetectionPath) -Severity 4 -Outhost
-    Write-LogEntry ("`$AppDetectionName='{0}'" -f $AppDetectionName) -Severity 4 -Outhost
-    Write-LogEntry ("`$AppDetectionValue='{0}'" -f $AppDetectionValue) -Severity 4 -Outhost
-    Write-LogEntry ("-----------------------------------------") -Severity 4 -Outhost
+        Write-LogEntry ("`$AppDetectionPath='{0}'" -f $AppDetectionPath) -Severity 4 -Outhost
+        Write-LogEntry ("`$AppDetectionName='{0}'" -f $AppDetectionName) -Severity 4 -Outhost
+        Write-LogEntry ("`$AppDetectionValue='{0}'" -f $AppDetectionValue) -Severity 4 -Outhost
+        Write-LogEntry ("-----------------------------------------") -Severity 4 -Outhost
 
         #scan the system for the application
         Write-LogEntry ("[CMDLET] Scan-ExistingApplication -ScanMethod $AppDetectionType -AppPath '$AppDetectionPath' -AppName '$AppDetectionName' -AppValue '$AppDetectionValue' -AppArc $AppSupportedArc") -Severity 4 -Outhost
@@ -811,9 +884,9 @@ foreach ($App in $Settings.xml.Application) {
             ElseIf($AppExists -eq $AppDetectionValue){
                 If($Global:Verbose){
                     switch($AppDetectionType){
-                        "REG"  {Write-LogEntry ("System's registry value [{0}] is equal to the application's detection value [{1}]." -f $AppExists,$AppDetectionValue) -Severity 4 -Outhost}
-                        "FILE" {Write-LogEntry ("Installed File [{0}] is equal to the application's installer [{1}]." -f $AppExists,$AppDetectionValue) -Severity 4 -Outhost}     
-                        "GUID" {Write-LogEntry ("Installed application GUID [{0}] is equal to the installer's GUID [{1}]." -f $AppExists,$AppDetectionValue) -Severity 4 -Outhost}
+                        "REG"  {Write-LogEntry ("System's registry value [{0}] is equal to the application's detection value [{1}]." -f $AppExists,$AppDetectionValue) -Outhost}
+                        "FILE" {Write-LogEntry ("Installed File [{0}] is equal to the application's installer [{1}]." -f $AppExists,$AppDetectionValue) -Outhost}     
+                        "GUID" {Write-LogEntry ("Installed application GUID [{0}] is equal to the installer's GUID [{1}]." -f $AppExists,$AppDetectionValue) -Outhost}
                     }
                 }
                 Else{
