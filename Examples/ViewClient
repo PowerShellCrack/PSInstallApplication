@@ -1,0 +1,20 @@
+<xml>
+	<Details>
+		<InstallName>Install-ViewClient</InstallName>
+		<Name>VMware Horizon Client</Name>
+		<Version>4.8.0.1562</Version>
+	</Details>
+	
+	<Application>
+		<Name>VMware Horizon Client</Name>
+		<Installer>[AUTO]</Installer>
+		<InstallerType>EXE</InstallerType>
+		<InstallSwitches>/s /v`"/qn /norestart DESKTOP_SHORTCUT=0 AUTO_UPDATE_ENABLED=False VDM_VC_MANAGED_AGENT=1 VDM_FIPS_ENABLED=1 INSTALL_VDISPLAY_DRIVER=1 ADDLOCAL=Core,ThinPrint,USB,NGVC,RTAV,SmartCard`"</InstallSwitches>
+		<SupportedArc>x64</SupportedArc>
+		<DetectionType>GUID</DetectionType>
+		<DetectionRule>{E3C69442-1164-4805-B8E2-CCED91044424},[Version]</DetectionRule>
+		<IgnoreExitCodes>3010</IgnoreExitCodes>
+		<ValidateInstall>False</ValidateInstall>
+	</Application>
+	
+</xml>
