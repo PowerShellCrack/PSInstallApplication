@@ -1,0 +1,20 @@
+<xml>
+	<Details>
+		<InstallName>Install-AppVolumeAgent3</InstallName>
+		<Name>App Volumes Unified Agent</Name>
+		<Version>3.0.0.148</Version>
+	</Details>
+	
+	<Application>
+		<Name>VMware App Volumes Unified Agent</Name>
+		<Installer>[AUTO]</Installer>
+		<InstallerType>EXE</InstallerType>
+		<InstallSwitches>/S /v/qn /V`"AddLocal=AppVolume PORT=80 ADDR=[SwitchArgument]` RebootYesNo=No"</InstallSwitches>
+		<SupportedArc>x86</SupportedArc>
+		<DetectionType>File</DetectionType>
+		<DetectionRule>{B2CDCA0E-ACCD-4033-8918-EC53371B1AF2},[Version]</DetectionRule>
+		<IgnoreExitCodes>3010</IgnoreExitCodes>
+		<ValidateInstall>False</ValidateInstall>
+	</Application>
+	
+</xml>
